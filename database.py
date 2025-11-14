@@ -6,7 +6,10 @@ import os
 class UserDatabase:
     """Local JSON-based database for hackathon MVP"""
     
-    def __init__(self, filepath: str = "user_data.json"):
+    def __init__(self, filepath: str = None):
+        if filepath is None:
+            # Use environment variable or default
+            filepath = os.getenv("DATA_FILE", "user_data.json")
         self.filepath = filepath
         self.data = self._load_data()
     
@@ -27,7 +30,7 @@ class UserDatabase:
                 "user_id": user_id,
                 "created_at": datetime.now().isoformat(),
                 "language": "ru",
-                "plants": [],  # List of grown plants
+                "plants": [],
                 "current_session": None,
                 "stats": {
                     "total_focus_minutes": 0,
@@ -35,10 +38,10 @@ class UserDatabase:
                     "current_streak": 0,
                     "longest_streak": 0,
                     "last_activity_date": None,
-                    "streak_freezes": 2  # Free recovery tokens
+                    "streak_freezes": 2
                 },
                 "preferences": {
-                    "session_duration": 25,  # Pomodoro default
+                    "session_duration": 25,
                     "favorite_plant": "🌱"
                 },
                 "achievements": []
@@ -73,11 +76,9 @@ class UserDatabase:
         if not session or session["status"] != "active":
             return None
         
-        # Mark session complete
         session["status"] = "completed"
         session["end_time"] = datetime.now().isoformat()
         
-        # Award plant
         plant = {
             "type": session["plant_type"],
             "grown_at": datetime.now().isoformat(),
@@ -85,24 +86,19 @@ class UserDatabase:
         }
         user["plants"].append(plant)
         
-        # Update stats
         user["stats"]["total_focus_minutes"] += session["duration_minutes"]
         user["stats"]["total_plants"] += 1
         
-        # Update streak
         today = datetime.now().date().isoformat()
         last_activity = user["stats"]["last_activity_date"]
         
         if last_activity == today:
-            # Already counted today
             pass
         elif last_activity == (datetime.now().date() - timedelta(days=1)).isoformat():
-            # Consecutive day - increment streak
             user["stats"]["current_streak"] += 1
             if user["stats"]["current_streak"] > user["stats"]["longest_streak"]:
                 user["stats"]["longest_streak"] = user["stats"]["current_streak"]
         else:
-            # Streak broken - reset to 1
             user["stats"]["current_streak"] = 1
         
         user["stats"]["last_activity_date"] = today
